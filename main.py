@@ -1,30 +1,30 @@
-"""
-TODO:
-Уточнить, какой формат штрих-кода нужен
-"""
-
-
 import openpyxl
 import os
+import configparser
 from reportlab.graphics import barcode
 from reportlab.graphics.shapes import Drawing
 from reportlab.graphics.renderPM import drawToFile
 from PIL import Image, ImageDraw, ImageFont
 
-BARCODE_FILE = "barcode.png"
-CERT_FILE = "certificate.jpg"
-RESULT_DIR = "results"
+config = configparser.ConfigParser()
+config.read("config.ini")
 
-BC_WIDTH = 300
-BC_HEIGHT = 100
-BC_x = 450
-BC_y = 300
-TEXT_FONT = "font.ttf"
-TEXT_x = 450
-TEXT_y = 150
-TEXT_SIZE = 100
-TEXT_COLOR = "#56100A"
-XLS_FILE = "test.xlsx"
+BC_WIDTH = int(config["BARCODE"]["width"])
+BC_HEIGHT = int(config["BARCODE"]["height"])
+BC_x = int(config["BARCODE"]["x"])
+BC_y = int(config["BARCODE"]["y"])
+
+TEXT_x = int(config["TEXT"]["text_x"])
+TEXT_y = int(config["TEXT"]["text_y"])
+TEXT_SIZE = int(config["TEXT"]["font_size"])
+TEXT_COLOR = config["TEXT"]["font_color"]
+
+EXCEL_EXT = [".xsl", ".xlsx", ".XSL", ".XLSX"]
+PICTURE_EXT = [".jpg", ".jpeg", ".bmp", ".png", ".JPG", ".JPEG", ".BMP", ".PNG"]
+FONT_EXT = [".TTF", ".ttf"]
+
+BARCODE_FILE = "_barcode.png"
+RESULT_DIR = "results"
 
 
 def create_barcode(code):
@@ -43,14 +43,15 @@ def put_barcode_to_cert(image):
 
 def put_text_to_cert(image, text):
     draw = ImageDraw.Draw(image)
-    font = ImageFont.truetype(font=TEXT_FONT, size=TEXT_SIZE)
-    draw.text((TEXT_x, TEXT_y), text, font=font, fill=TEXT_COLOR)
+    font = get_font()
+    text_font = ImageFont.truetype(font=font, size=TEXT_SIZE)
+    draw.text((TEXT_x, TEXT_y), text, font=text_font, fill=TEXT_COLOR)
     return image
 
 
-def insert_data_to_picture(code, price):
+def insert_data_to_picture(cert_filename, code, price):
     create_barcode(code)
-    cert = Image.open(CERT_FILE)
+    cert = Image.open(cert_filename)
     cert = put_barcode_to_cert(cert)
     cert = put_text_to_cert(cert, f"{price} ₽")
     cert.save(f"{RESULT_DIR}/{code}.jpg")
@@ -72,13 +73,44 @@ def get_data_from_xsl(file_name):
             yield data
 
 
-def create_dir():
-    if not os.path.exists(RESULT_DIR):
-        os.mkdir(RESULT_DIR)
+def create_dir(name):
+    if not os.path.exists(name):
+        os.mkdir(name)
+
+
+def get_filename(extension):
+    files_list = [f for f in os.listdir(".") if os.path.isfile(f) and os.path.splitext(f)[1] in extension]
+    if files_list:
+        return files_list[0]
+    print(f"Не найдено файла с расширением {extension}")
+    return None
+
+
+def get_font():
+    font_file = get_filename(FONT_EXT)
+    if not None:
+        return font_file
+    return config["TEXT"]["font"]
+
+
+def remove_tmp_files():
+    tmp_files = [f for f in os.listdir(".") if os.path.isfile(f) and os.path.splitext(f)[1] in PICTURE_EXT]
+    for f in tmp_files:
+        if f.startswith("_"):
+            os.remove(f)
+
+
+def init():
+    create_dir(RESULT_DIR)
+    remove_tmp_files()
 
 
 if __name__ == "__main__":
-    create_dir()
-    for data in get_data_from_xsl(XLS_FILE):
+    init()
+    create_dir(RESULT_DIR)
+    excel_filename = get_filename(EXCEL_EXT)
+    cert_filename = get_filename(PICTURE_EXT)
+
+    for data in get_data_from_xsl(excel_filename):
         print(data)
-        insert_data_to_picture(*data)
+        insert_data_to_picture(cert_filename, *data)
