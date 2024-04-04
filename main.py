@@ -60,7 +60,6 @@ def insert_data_to_picture(cert_filename, code, price):
 
 
 def get_data_from_xsl(file_name):
-    print("GENERATOR")
     workbook = openpyxl.load_workbook(file_name)
     worksheet = workbook.active
 
@@ -112,5 +111,4 @@ if __name__ == "__main__":
     cert_filename = get_filename(PICTURE_EXT)
 
     for data in get_data_from_xsl(excel_filename):
-        print(data)
         insert_data_to_picture(cert_filename, *data)
