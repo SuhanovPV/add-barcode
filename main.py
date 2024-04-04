@@ -87,7 +87,7 @@ def get_filename(extension):
 
 def get_font():
     font_file = get_filename(FONT_EXT)
-    if not None:
+    if font_file:
         return font_file
     return config["TEXT"]["font"]
 
