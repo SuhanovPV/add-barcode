@@ -51,10 +51,13 @@ def put_text_to_cert(image, text):
 
 def insert_data_to_picture(cert_filename, code, price):
     create_barcode(code)
-    cert = Image.open(cert_filename)
+    cert = Image.open(cert_filename).convert('RGB')
     cert = put_barcode_to_cert(cert)
     cert = put_text_to_cert(cert, f"{price} ₽")
-    cert.save(f"{RESULT_DIR}/{code}.jpg")
+    cert.save(f"{RESULT_DIR}/{code}.jpg",
+              format="JPEG",
+              quality=100,
+              icc_profile=cert.info.get('icc_profile',''))
     cert.close()
     os.remove(BARCODE_FILE)
 
