@@ -13,6 +13,7 @@ BC_WIDTH = int(config["BARCODE"]["width"])
 BC_HEIGHT = int(config["BARCODE"]["height"])
 BC_x = int(config["BARCODE"]["x"])
 BC_y = int(config["BARCODE"]["y"])
+BC_border_v = int(config["BARCODE"]["border_v"])
 
 TEXT_x = int(config["TEXT"]["text_x"])
 TEXT_y = int(config["TEXT"]["text_y"])
@@ -31,10 +32,13 @@ def create_barcode(code):
     draw = Drawing(BC_WIDTH, BC_HEIGHT)
     new_barcode = barcode.createBarcodeDrawing('EAN13', value=code, width=BC_WIDTH, height=BC_HEIGHT)
     draw.add(new_barcode)
+    draw.add(new_barcode)
     drawToFile(draw, BARCODE_FILE)
 
 
 def put_barcode_to_cert(image):
+    draw = ImageDraw.Draw(image)
+    draw.rectangle((BC_x-BC_border_v, BC_y, BC_x + BC_WIDTH, BC_y + BC_HEIGHT + BC_border_v * 2), fill="#FFFFFF")
     bc = Image.open(BARCODE_FILE)
     image.paste(bc, (BC_x, BC_y))
     bc.close()
@@ -57,7 +61,7 @@ def insert_data_to_picture(cert_filename, code, price):
     cert.save(f"{RESULT_DIR}/{code}.jpg",
               format="JPEG",
               quality=100,
-              icc_profile=cert.info.get('icc_profile',''))
+              icc_profile=cert.info.get('icc_profile', ''))
     cert.close()
     os.remove(BARCODE_FILE)
 
