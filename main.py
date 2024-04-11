@@ -1,6 +1,8 @@
 import openpyxl
 import os
 import configparser
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.graphics import barcode
 from reportlab.graphics.shapes import Drawing
 from reportlab.graphics.renderPM import drawToFile
@@ -22,9 +24,9 @@ TEXT_COLOR = config["TEXT"]["font_color"]
 
 EXCEL_EXT = [".xsl", ".xlsx", ".XSL", ".XLSX"]
 PICTURE_EXT = [".jpg", ".jpeg", ".bmp", ".png", ".JPG", ".JPEG", ".BMP", ".PNG"]
-FONT_EXT = [".TTF", ".ttf"]
+FONT_EXT = [".OTF", ".otf"]
 
-BARCODE_FILE = "_barcode.png"
+BARCODE_FILE = "_barcode.jpg"
 RESULT_DIR = "results"
 
 
@@ -34,6 +36,25 @@ def create_barcode(code):
     draw.add(new_barcode)
     draw.add(new_barcode)
     drawToFile(draw, BARCODE_FILE)
+
+
+    b = Image.open(BARCODE_FILE).convert('RGB')
+    d = ImageDraw.Draw(b)
+    d.rectangle((0, 240, 40, 270), fill="#FFFFFF")
+    d.rectangle((70, 240, 285, 270), fill="#FFFFFF")
+    d.rectangle((315, 240, 530, 270), fill="#FFFFFF")
+
+    font = get_font()
+    text_font = ImageFont.truetype(font=font, size=35)
+    d.text((10, 230), str(code)[0], font=text_font, fill="#000000")
+    d.text((115, 230), str(code)[1:7], font=text_font, fill="#000000")
+    d.text((370, 230), str(code)[7:], font=text_font, fill="#000000")
+
+    b.save(BARCODE_FILE,
+              format="JPEG",
+              quality=100,
+              icc_profile=b.info.get('icc_profile', ''))
+
 
 
 def put_barcode_to_cert(image):
@@ -119,3 +140,5 @@ if __name__ == "__main__":
 
     for data in get_data_from_xsl(excel_filename):
         insert_data_to_picture(cert_filename, *data)
+    print("DONE! Check result folder.\nfor exit press eny key")
+    input()
