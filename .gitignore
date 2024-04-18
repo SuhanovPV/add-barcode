@@ -2,7 +2,6 @@ results/
 *.jpg
 *.bmp
 *.xlsx
-*.ttf
 
 # Environments
 venv/
