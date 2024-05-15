@@ -9,8 +9,13 @@ from reportlab.graphics.shapes import Drawing
 from reportlab.graphics.renderPM import drawToFile
 from PIL import Image, ImageDraw, ImageFont
 
+CUR_DIR_PATH = os.path.dirname(os.path.realpath(__file__))
+CONFIG_FILE = os.path.join(CUR_DIR_PATH, "config.ini")
+BARCODE_FILE = os.path.join(CUR_DIR_PATH, "_barcode.jpg")
+RESULT_DIR = os.path.join(CUR_DIR_PATH, "results")
+
 config = configparser.ConfigParser()
-config.read("config.ini")
+config.read(CONFIG_FILE)
 
 BC_WIDTH = int(config["BARCODE"]["width"])
 BC_HEIGHT = int(config["BARCODE"]["height"])
@@ -33,8 +38,7 @@ FONT_DIR = "fonts"
 FONT_OTF = "ALS_Granate_Book_1.1.otf"
 FONT_TTF = "ALS_Granate_Book_1.1.ttf"
 
-BARCODE_FILE = "_barcode.jpg"
-RESULT_DIR = "results"
+
 
 
 def create_barcode(code):
@@ -55,8 +59,6 @@ def is_need_crop():
 
 
 def put_barcode_to_cert(image):
-    draw = ImageDraw.Draw(image)
-
     bc = Image.open(BARCODE_FILE)
     if is_need_crop():
         image.paste(bc.crop((0, bc.height - BC_HEIGHT, bc.width, bc.height)), (BC_x, BC_y))
@@ -81,6 +83,7 @@ def put_text_to_cert(image, text):
 
 
 def insert_data_to_picture(cert_filename, code, price):
+    print(f"create barcode {code}")
     create_barcode(code)
     cert = Image.open(cert_filename).convert('RGB')
     put_bc_background(cert)
@@ -113,7 +116,7 @@ def create_dir(name):
 
 
 def get_filename(extension):
-    files_list = [f for f in os.listdir(".") if os.path.isfile(f) and os.path.splitext(f)[1] in extension]
+    files_list = [f for f in os.listdir(CUR_DIR_PATH) if os.path.isfile(f) and os.path.splitext(f)[1] in extension]
     if files_list:
         return files_list[0]
     print(f"Не найдено файла с расширением {extension}")
@@ -122,7 +125,7 @@ def get_filename(extension):
 
 def remove_tmp_files():
     """remove accessory files"""
-    tmp_files = [f for f in os.listdir(".") if os.path.isfile(f) and os.path.splitext(f)[1] in PICTURE_EXT]
+    tmp_files = [f for f in os.listdir(CUR_DIR_PATH) if os.path.isfile(f) and os.path.splitext(f)[1] in PICTURE_EXT]
     for f in tmp_files:
         if f.startswith("_"):
             os.remove(f)
@@ -140,4 +143,5 @@ if __name__ == "__main__":
     cert_filename = get_filename(PICTURE_EXT)
     for data in get_data_from_xsl(excel_filename):
         insert_data_to_picture(cert_filename, *data)
-    print("DONE! Check result folder.\nfor exit press eny key")
+    print("DONE! Check result folder.\nfor exit press eny key >", end=" ")
+    input()
