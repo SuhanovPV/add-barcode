@@ -34,7 +34,7 @@ TEXT_COLOR = config["TEXT"]["font_color"]
 
 EXCEL_EXT = [".xsl", ".xlsx", ".XSL", ".XLSX"]
 PICTURE_EXT = [".jpg", ".jpeg", ".bmp", ".png", ".JPG", ".JPEG", ".BMP", ".PNG"]
-FONT_DIR = "fonts"
+FONT_DIR = os.path.join(CUR_DIR_PATH, "fonts")
 FONT_OTF = "ALS_Granate_Book_1.1.otf"
 FONT_TTF = "ALS_Granate_Book_1.1.ttf"
 
@@ -116,7 +116,8 @@ def create_dir(name):
 
 
 def get_filename(extension):
-    files_list = [f for f in os.listdir(CUR_DIR_PATH) if os.path.isfile(f) and os.path.splitext(f)[1] in extension]
+    all_object_in_dir = [os.path.join(CUR_DIR_PATH, f) for f in os.listdir(CUR_DIR_PATH)]
+    files_list = [f for f in all_object_in_dir if os.path.isfile(f) and os.path.splitext(f)[1] in extension]
     if files_list:
         return files_list[0]
     print(f"Не найдено файла с расширением {extension}")
