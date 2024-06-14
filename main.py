@@ -1,6 +1,7 @@
 import openpyxl
 import os
 import configparser
+import time
 from reportlab.lib.colors import HexColor
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
@@ -37,8 +38,6 @@ PICTURE_EXT = [".jpg", ".jpeg", ".bmp", ".png", ".JPG", ".JPEG", ".BMP", ".PNG"]
 FONT_DIR = os.path.join(CUR_DIR_PATH, "fonts")
 FONT_OTF = "ALS_Granate_Book_1.1.otf"
 FONT_TTF = "ALS_Granate_Book_1.1.ttf"
-
-
 
 
 def create_barcode(code):
@@ -144,5 +143,6 @@ if __name__ == "__main__":
     cert_filename = get_filename(PICTURE_EXT)
     for data in get_data_from_xsl(excel_filename):
         insert_data_to_picture(cert_filename, *data)
-    print("DONE! Check result folder.\nfor exit press eny key >", end=" ")
-    input()
+    print("DONE! Check result folder")
+    os.startfile(RESULT_DIR)
+    time.sleep(7)
