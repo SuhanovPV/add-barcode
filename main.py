@@ -4,6 +4,8 @@ import sys
 from PyQt6.QtCore import pyqtSlot
 from PyQt6.QtWidgets import QApplication, QMainWindow, QPushButton, QTabWidget, QHBoxLayout, QLabel, QWidget, \
     QGridLayout, QLineEdit, QVBoxLayout, QFileDialog, QMessageBox
+from PyQt6 import QtGui
+
 from utils.config_manager import ConfigManager
 from utils import add_barcode, excel_helper
 
@@ -14,39 +16,30 @@ from utils import add_barcode, excel_helper
 
 
 class MainWindow(QMainWindow):
-    # sender_btn = QObject.sender(self) - получить отправителя сигнала
     # TODO добавить функцию обрезки текста для полей, если не помещается
     # TODO заменять разделители в тексте согласно OS
     # TODO добавить подсказку для полей с полным путем
+    # TODO добавить возможность обработки CSV
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.config = ConfigManager()
         self.barcode_xls_data_file = ''
-        self.barcode_work_dir_path = self.config.get_path_work_dir()
-        self.barcode_result_dir = self.config.get_path_result_dir()
-        self.barcode_template_file = self.config.get_path_template_file()
+        self.excel_data_file = ''
+        self.barcode_work_dir_path = os.path.normpath(self.config.get_path_work_dir())
+        self.barcode_result_dir = os.path.normpath(self.config.get_path_result_dir())
+        self.barcode_template_file = os.path.normpath(self.config.get_path_template_file())
 
         self.setWindowTitle("Helper")
+        self.setWindowIcon(QtGui.QIcon("icons.png"))
         self.setMinimumSize(550, 350)
         self.statusBar().showMessage("Выберите файл")
 
-        # TODO добавить текст в status bar в зависимости
-        # Tab widget
         tab = QTabWidget(self)
 
-        # Barcode page
         barcode_page = self._crate_barcode_page()
+        excel_page = self._create_excel_page()
 
-        # Work with xlsx
-        excel_page = QWidget(self)
-        excel_layout = QHBoxLayout()
-        excel_page.setLayout(excel_layout)
-
-        select_excel_file = QPushButton("Выбрать файл")
-        excel_layout.addWidget(select_excel_file)
-
-        # add pane to tab widget
         tab.addTab(barcode_page, 'Создание листовок')
         tab.addTab(excel_page, 'Обработка excel')
 
@@ -77,7 +70,7 @@ class MainWindow(QMainWindow):
             input_name='result_dir_input',
             btn_text='Выбрать',
             btn_func=self.click_barcode_select_result_folder,
-            input_text=self.config.get_path_result_dir()
+            input_text=self.barcode_result_dir
         )
 
         result_template_layout = self._add_row_h_layout(
@@ -85,17 +78,15 @@ class MainWindow(QMainWindow):
             input_name='template_input',
             btn_text='Выбрать',
             btn_func=self.click_barcode_select_template_file,
-            input_text=self.config.get_path_template_file()
+            input_text=self.barcode_template_file
         )
 
-        button_layout = QHBoxLayout()
-        btn = QPushButton('Создать')
-        btn.setObjectName('barcode_btn')
-        btn.setDisabled(True)
-        # btn.clicked.connect(self.click_barcode_create_leaflets)
-        btn.pressed.connect(self.click_barcode_create_leaflets)
-        button_layout.addStretch()
-        button_layout.addWidget(btn)
+        button_layout = self._add_execute_btn_layout(
+            btn_text='Создать',
+            slot=self.click_barcode_create_leaflets,
+            btn_name='barcode_btn',
+            disabled=True
+        )
 
         widget_layout.addLayout(data_file_layout)
         widget_layout.addLayout(result_dir_layout)
@@ -104,6 +95,40 @@ class MainWindow(QMainWindow):
         widget_layout.addLayout(button_layout)
         widget.setLayout(widget_layout)
         return widget
+
+    def _create_excel_page(self):
+        widget = QWidget(self)
+        widget_layout = QVBoxLayout()
+        data_file_layout = self._add_row_h_layout(
+            lbl_text='Файл c данными',
+            input_name='excel_file',
+            btn_text='Выбрать',
+            btn_func=self.click_select_data_file
+        )
+
+        button_layout = self._add_execute_btn_layout(
+            btn_text='Проверить',
+            slot=self.click_check_excel,
+            btn_name='excel_btn',
+            disabled=True
+        )
+
+        widget_layout.addLayout(data_file_layout)
+        widget_layout.addStretch()
+        widget_layout.addLayout(button_layout)
+        widget.setLayout(widget_layout)
+        return widget
+
+    @staticmethod
+    def _add_execute_btn_layout(btn_text, slot, btn_name, disabled=False):
+        layout = QHBoxLayout()
+        btn = QPushButton(btn_text)
+        btn.setObjectName(btn_name)
+        btn.setDisabled(disabled)
+        btn.clicked.connect(slot)
+        layout.addStretch()
+        layout.addWidget(btn)
+        return layout
 
     @staticmethod
     def _add_row_h_layout(lbl_text, input_name, btn_text, btn_func, input_text="Не выбрано"):
@@ -133,13 +158,14 @@ class MainWindow(QMainWindow):
         )
 
         if file_name:
-            self.barcode_xls_data_file = file_name
+            self.barcode_xls_data_file = os.path.normpath(file_name)
             folder, file = os.path.split(self.barcode_xls_data_file)
             line_input = self._get_element_by_name(QLineEdit, 'data_file_input')
             line_input.setText(file)
             self.config.set_path_work_dir(folder)
             btn = self._get_element_by_name(QPushButton, 'barcode_btn')
             btn.setDisabled(False)
+            self.statusBar().showMessage('Нажмите кнопку "Создать"')
 
     @pyqtSlot()
     def click_barcode_select_result_folder(self):
@@ -158,16 +184,40 @@ class MainWindow(QMainWindow):
             extension='Image jpg (*.jpg *.jpeg)'
         )
         if file:
-            self.barcode_template_file = file
-            self.config.set_path_template_file(file)
+            self.barcode_template_file = os.path.normpath(file)
+            self.config.set_path_template_file(self.barcode_template_file)
 
     @pyqtSlot()
     def click_barcode_create_leaflets(self):
+        self.statusBar().showMessage("Проверка файлов")
         if self.is_files_exist([self.barcode_xls_data_file, self.barcode_template_file]) and \
                 self.is_folder_exist_or_create(self.barcode_result_dir):
+            self.statusBar().showMessage("Создание листовок")
             for code, price in excel_helper.get_barcode_data_from_xsl(self.barcode_xls_data_file):
                 add_barcode.create_leaflets(code, price, self.barcode_result_dir, self.barcode_template_file,
                                             self.config)
+            self.statusBar().showMessage("Готово!")
+
+    @pyqtSlot()
+    def click_select_data_file(self):
+        file_name = self.open_file_dialog(
+            title="Выберите файл для обработки",
+            folder=self.config.get_path_work_dir(),
+            extension='Excel files (*.xlsx *.xls)'
+        )
+        if file_name:
+            self.excel_data_file = os.path.normpath(file_name)
+            folder, file = os.path.split(self.excel_data_file)
+            line_input = self._get_element_by_name(QLineEdit, 'excel_file')
+            line_input.setText(file)
+            self.config.set_path_work_dir(folder)
+            btn = self._get_element_by_name(QPushButton, 'excel_btn')
+            btn.setDisabled(False)
+
+    @pyqtSlot()
+    def click_check_excel(self):
+        if self.is_files_exist([self.excel_data_file]):
+            print("Обработка")
 
     def open_file_dialog(self, title, folder, extension):
         return QFileDialog.getOpenFileName(self, title, folder, f"{extension};; All Files (*)")[0]
@@ -204,5 +254,6 @@ class MainWindow(QMainWindow):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
+    app.setWindowIcon(QtGui.QIcon("icons.png"))
     window = MainWindow()
     app.exec()
